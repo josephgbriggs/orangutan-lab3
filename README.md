@@ -1,5 +1,5 @@
 
-Lab Assignment 2 : PD Motor Control
+Lab Assignment 3 : PD Motor Control
 ===================================
 Due : Sunday-ish, April 13th-ish
 Submit electronically via email or repo
@@ -58,29 +58,22 @@ The motor is attached to the Motor2 port of the Orangutan. This corresponds to O
 Trajectory Interpolator
 -----------------------
 For this lab, the interpolator will be used with positional control and serves the purpose of managing the reference (desired) position and feeding it to the PD controller to execute a complete trajectory (e.g. rotate forward 360 deg, rotate backwards 90 deg, rotate forward 10 deg).
-User Interface
 
+User Interface
+--------------
 The user interface consists of the following commands at a minimum (feel free to add in whatever makes your life easier for programming and debugging):
 
     L/l: Start/Stop Logging (print) the values of Pr, Pm, and T.
-
     V/v: View the current values Kd, Kp, Vm, Pr, Pm, and T
-
     R/r : Set the reference position (use unit "counts")
-
     S/s : Set the reference speed (use unit "counts"/sec)
-
     P: Increase Kp by an amount of your choice*
-
     p: Decrease Kp by an amount of your choice
-
     D: Increase Kd by an amount of your choice
-
     d: Decrease Kd by an amount of your choice
-
     t: Execute trajectory
-
-    * The amount to increase or decrease the gain by depends on how you set up the PWM channel
+   
+* The amount to increase or decrease the gain by depends on how you set up the PWM channel
 
 
 Deliverables
