@@ -72,8 +72,8 @@ The user interface consists of the following commands at a minimum (feel free to
     D: Increase Kd by an amount of your choice
     d: Decrease Kd by an amount of your choice
     t: Execute trajectory
-   
-* The amount to increase or decrease the gain by depends on how you set up the PWM channel
+	  
+	* The amount to increase or decrease the gain by depends on how you set up the PWM channel
 
 
 Deliverables
