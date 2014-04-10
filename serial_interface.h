@@ -34,12 +34,6 @@
 // corrupt an existing transmission.
 void wait_for_sending_to_finish();
 
-// process_received_byte: Parses a menu command (series of keystrokes) that 
-// has been received on USB_COMM and processes it accordingly.
-// The menu command is buffered in check_for_new_bytes_received (which calls this function).
-void process_received_string(const char*);
-
-
 // If there are received bytes to process, this function loops through the receive_buffer
 // accumulating new bytes (keystrokes) in another buffer for processing.
 void check_for_new_bytes_received();
