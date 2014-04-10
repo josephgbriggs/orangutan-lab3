@@ -19,19 +19,15 @@ PD Controller
 -------------
 The PD controller maintains either the position or speed of the motor using the measured and reference positions of each. It is of the highest priority in the system. The frequency of the controller task should be slightly higher than the desired sampling rate of the encoder readings, which will provide a measure of both position and speed. The positional controller that you will implement calculates a desired torque according to the equation
 
-    T = Kp(Pr - Pm) - Kd*Vm where
-
-    T = Output motor signal (torque)
-
-    Pr = Desired motor position or speed
-
-    Pm = Current motor position or speed
-
-    Vm = Current motor velocity (computed based on finite differences)
-
-    Kp = Proportional gain
-
-    Kd = Derivative gain
+    T = Kp(Pr - Pm) - Kd*Vm 
+	
+	where
+    	T = Output motor signal (torque)
+    	Pr = Desired motor position or speed
+    	Pm = Current motor position or speed
+    	Vm = Current motor velocity (computed based on finite differences)
+    	Kp = Proportional gain
+    	Kd = Derivative gain
 
 and the speed controller calculates desired torque according to the equation
 
