@@ -1,12 +1,11 @@
-#include <stdio.h>
-#include <inttypes.h>
-
 #include "serial_interface.h"
+#include "motor.h"
+
 
 // local global data structures
-char receive_buffer[32];
-unsigned char receive_buffer_position;
-char send_buffer[32];
+static char receive_buffer[32];
+static unsigned char receive_buffer_position;
+static char send_buffer[32];
 
 // A generic function for whenever you want to print to your serial comm window.
 // Provide a string and the length of that string. My serial comm likes "\r\n" at 
@@ -21,8 +20,8 @@ void print_usage() {
 	print_usb("command: \r\n", 11);
 	print_usb("  l       Toggle Logging\r\n", 26);
 	print_usb("  v       View current values\r\n", 31);
-	print_usb("  r<arg>  Set position\r\n", 24);
-	print_usb("  s<arg>  Set speed\r\n", 21);
+	print_usb("  r<arg>  Set position [0,127]\r\n", 32);
+	print_usb("  s<arg>  Set speed [-255,255]\r\n", 32);
 	print_usb("  P       Increase Kp\r\n", 23);
 	print_usb("  p       Decrease Kp\r\n", 23);
 	print_usb("  D       Increase Kd\r\n", 23);
@@ -44,8 +43,6 @@ void init_interface() {
 	serial_receive_ring(USB_COMM, receive_buffer, sizeof(receive_buffer));
 
 	print_usb( "USB Serial Initialized\r\n", 24);
-	print_usage();
-	print_usb(PROMPT, PROMPT_LENGTH);
 }
 
 //------------------------------------------------------------------------------------------
@@ -80,6 +77,7 @@ void process_received_string(const char* buffer)
 		// Start/Stop Logging (print) the values of Pr, Pm, and T.
 		case 'L':
 		case 'l':
+			G_logging_flag = (G_logging_flag == 0) ? 1 : 0;
 			break;
 		// View the current values Kd, Kp, Vm, Pr, Pm, and T
 		case 'V':
@@ -92,6 +90,7 @@ void process_received_string(const char* buffer)
 		// Set the reference speed (use unit "counts"/sec)
 		case 'S':
 		case 's':
+			set_speed(value);
 			break;
 		// Increase Kp
 		case 'P':

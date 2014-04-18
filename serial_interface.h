@@ -6,9 +6,14 @@
 #ifndef __SERIAL_INTERFACE_H
 #define __SERIAL_INTERFACE_H
 
+#include <stdio.h>
+#include <inttypes.h>
+#include <string.h>
 #include <pololu/orangutan.h>  
 
+
 // extern GLOBALS
+extern volatile uint8_t G_logging_flag;
 
 /* This is a customization of the serial2 example from the Pololu library examples. (ACL)
  *
@@ -28,6 +33,7 @@
 #define PROMPT ">"
 #define PROMPT_LENGTH 1
 
+
 // wait_for_sending_to_finish:  Waits for the bytes in the send buffer to
 // finish transmitting on USB_COMM.  We must call this before modifying
 // send_buffer or trying to send more bytes, because otherwise we could
@@ -46,4 +52,7 @@ void init_interface();
 // the end of each string (be sure to include in length) for proper linefeed.
 void print_usb(char*,int);
 
+// Display command options to the user
+void print_usage();
+	
 #endif //__SERIAL_INTERFACE_H

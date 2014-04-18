@@ -10,7 +10,7 @@ LDFLAGS=-Wl,-gc-sections -lpololu_$(DEVICE) -Wl,-relax
 
 AVRDUDE=avrdude
 TARGET=lab3
-OBJECT_FILES=lab3.o
+OBJECT_FILES=lab3.o motor.o serial_interface.o controller.o
 
 all: $(TARGET).hex
 
