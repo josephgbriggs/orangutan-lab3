@@ -153,17 +153,21 @@ uint8_t get_position() {
 	return G_wheel_position;
 }
 
+/* 
+ * Fire this ISR on every signal we receive from the encoder
+ */
 ISR(PCINT0_vect) {
 
 	// update the encoder count
 	G_enc_count++;
-	// update the wheel position
+	// update the wheel position, adding or substracting depending on direction
 	(G_motor_dir == 0) ? G_wheel_position++ : G_wheel_position--;
 	
-	// roll over back to zero if needed
+	// roll over back to position zero when we go all the way around
 	G_wheel_position %= NUM_WHEEL_POSITIONS;
 	
 	if (G_logging_flag) {
 		G_release_logging = 1;
 	}
 }
+
