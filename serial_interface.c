@@ -1,6 +1,12 @@
+#include <pololu/orangutan.h>  
 #include "serial_interface.h"
 #include "motor.h"
+#include "controller.h"
 
+// extern
+extern volatile uint8_t G_logging_flag;
+extern volatile uint16_t G_Kp; // Proportial gain
+extern volatile uint16_t G_Kd; // Derivative gain
 
 // local global data structures
 static char receive_buffer[32];
@@ -78,14 +84,28 @@ void process_received_string(const char* buffer)
 		case 'L':
 		case 'l':
 			G_logging_flag = (G_logging_flag == 0) ? 1 : 0;
+			if (G_logging_flag) {
+				print_usb("Logging on\r\n", 12);
+			}
+			else {
+				print_usb("Logging off\r\n", 13);
+			}
 			break;
 		// View the current values Kd, Kp, Vm, Pr, Pm, and T
 		case 'V':
 		case 'v':
+			length = buffer_controller_values(tempBuffer);
+			print_usb( tempBuffer, length );
 			break;
 		// Set the reference position (use unit "counts")
 		case 'R':
 		case 'r':
+			if (value > 127 || value < 0) {
+				print_usb("Value must me [0..127]\r\n", 24);
+			}
+			else {
+				set_position(value);
+			}
 			break;
 		// Set the reference speed (use unit "counts"/sec)
 		case 'S':
@@ -94,15 +114,19 @@ void process_received_string(const char* buffer)
 			break;
 		// Increase Kp
 		case 'P':
+			G_Kp++;
 			break;
 		// Decrease Kp
 		case 'p':
+			G_Kp--;
 			break;
 		// Increase Kd
 		case 'D':
+			G_Kd++;
 			break;
 		// Decrease Kd
 		case 'd':
+			G_Kd--;
 			break;
 		case 'T':
 		case 't':

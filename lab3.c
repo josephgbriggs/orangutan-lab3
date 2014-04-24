@@ -7,7 +7,6 @@
 
 // Globals
 volatile uint8_t G_reset_source = 0;
-volatile uint8_t G_release_logging = 0;
 volatile uint8_t G_logging_flag = 0;
 
 /******************************************************************************/
@@ -40,12 +39,13 @@ int main() {
 	
 	// This init will block if no serial connection present
 	// so user sees message on LCD to make a connection
-	init_interface();	
+	init_interface();
 
 	// Display the user interface over the serial usb
 	// connection
 	serial_check();
 	print_reset_reason();
+	
 	
 	print_usb("Welcome to lab 3!\r\n", 19);
 	print_usage();
@@ -59,24 +59,22 @@ int main() {
 	char tempBuffer[32];
 	int length = 0;
 	
+	// set controller for 1000 Hz
+	init_controller_rate(1000);
 	init_motor();
 	init_encoder();
 	
 	while (1) {
 		serial_check();
 		check_for_new_bytes_received();
-		if (G_release_logging) {
-			G_release_logging = 0;
-			length = sprintf( tempBuffer, "encoder cnt: %u  ", G_enc_count);
-			print_usb( tempBuffer, length );
-			length = sprintf( tempBuffer, "position: %u\r\n", G_wheel_position);
-			print_usb( tempBuffer, length );
-		}
-
-		if (G_enc_count == 256) {
-			// see if this is one rotation
-			set_speed(0);
-		}
+		// if (G_logging_flag) {
+		// 	length = sprintf(tempBuffer, "encoder cnt: %u  ", G_enc_count);
+		// 	print_usb(tempBuffer, length);
+		// 	length = sprintf(tempBuffer, "position: %u\r\n", G_wheel_position);
+		// 	print_usb(tempBuffer, length);
+		// 	length = buffer_controller_values(tempBuffer);
+		// 	print_usb(tempBuffer, length);
+		// }
 	}
 	
 	return 0;

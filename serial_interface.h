@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
-#include <pololu/orangutan.h>  
 
 
 // extern GLOBALS

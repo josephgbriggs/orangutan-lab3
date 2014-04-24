@@ -43,7 +43,10 @@
 
 // external globals
 extern volatile uint16_t G_enc_count;
-extern volatile uint8_t G_wheel_position;
+extern volatile uint8_t G_enc_position;
+extern volatile uint8_t G_encoder_event;
+extern volatile uint8_t G_mot_sig_torque;
+extern volatile uint8_t G_mot_sig_dir;
 
 /*
  * Initializes the clocks and other PWM settings for the motor.
@@ -61,17 +64,7 @@ void init_encoder();
  * Set the rotational speed of the motor
  * Input is limited between -255 and 255
  */
-void set_speed(int8_t speed);
-
-
-/*
-int encoders_get_counts_m1(void);
-int encoders_get_counts_m2(void);
-int encoders_get_counts_and_reset_m1(void);
-int encoders_get_counts_and_reset_m2(void);
-int encoders_check_error_m1(void);
-int encoders_check_error_m2(void);
-*/
+void set_torque(int16_t torque);
 
 /* 
  * Returns the position of the wheel as a value from 0 to 127

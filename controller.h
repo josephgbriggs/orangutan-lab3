@@ -2,38 +2,46 @@
 #define __CONTROLLER_H
 
 #include <inttypes.h>
-// extern
+#include <stdio.h>
 
-
-typedef struct {
-	uint16_t last_position;
-	
-	uint16_t Kp; // Proportial gain
-	uint16_t Kd; // Derivative gain
-	
-} control_state_s;
+// Global Gains
+volatile uint16_t G_Kp; // Proportial gain
+volatile uint16_t G_Kd; // Derivative gain
 
 /*
- * Set up the sampling rate for the calculations in the controller
- * Valid values for Hz are { 1000, 100, 50, 10}
+ * Set up the sampling rate in Hz for the calculations in the controller.
+ * Valid values for the parameter hz are {1000, 100, 50, 10}
  * If one of those values not selected, it defaults to 1000 Hz
  */
-void init_clock(uint16_t hz);
+void init_controller_rate(uint16_t hz);
 
 /*
- * Use Proportial and Derivative closed-loop control to acheive the desired setting
+ * Set the speed in 'counts' per second
+ * Maximum speed range is [-255, 255]
  */
-int16_t calculate_pd(control_state_s *state, int16_t target_p, int16_t current_p);
+void set_speed(int16_t);
 
 /*
- * Use Proportial and Derivative closed-loop control to acheive the desired setting
+ * Set position of the wheel. The inital position at program start is '0'.
+ * Positions increment clockwise around the wheel in the range 0..127
  */
-int16_t calculate_pd_w_rate(control_state_s *state, int16_t target_p, int16_t current_p, int16_t current_rate);
+void set_position(uint8_t);
 
-
+/*
+ * Rotate the wheel clockwise a certain number of 'counts' from the 
+ * current position. There are 128 counts in a complete rotation.
+ */
 void rotate_cw(uint16_t cnt);
 
+/*
+ * Rotate the wheel clockwise a certain number of 'counts' from the 
+ * current position. There are 128 counts in a complete rotation.
+ */
 void rotate_ccw(uint16_t cnt);
 
+/*
+ * fill the buffer with the current values
+ */
+int buffer_controller_values(char* buffer);
 
 #endif //__CONTROLLER_H
