@@ -51,31 +51,42 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <pololu/digital.h>
+#include <pololu/OrangutanTime.h>
 #include "motor.h"
 #include "serial_interface.h"// TODO this include is temporary for debugging
 #include "controller.h" // TODO this include is temporary for debugging
 
-static volatile unsigned long us_last_event;
+#define MICROS_PER_SEC	1000000UL
 
 // encoder
 #define ENC_A_PIN		IO_A0
 #define ENC_B_PIN		IO_A1
 #define ENC_POS_PER_ROT	128
 static volatile unsigned long us_at_last_event;
+static volatile unsigned long us_delta;
 static volatile uint8_t enc_a_val_last;
 static volatile uint8_t enc_b_val_last;
 volatile uint16_t 		G_enc_count;
+volatile uint16_t		G_enc_count_last; // shouldn't have to keep track of last value
+											// but I am getting hardware errors and can't count on 
+											// one position change for every successful ISR firing 
+											// due to encoder and timer hardware issues
 volatile uint8_t 		G_enc_direction; // 0=forward 1=reverse
 volatile uint8_t 		G_enc_position; // current position of the wheel
+volatile uint8_t 		G_enc_position_last; 
+
 volatile int16_t		G_enc_ang_vel;  // in units of positions/sec
 volatile uint8_t		G_enc_error;
 
 // motor
 #define PWM_PORTPIN		IO_D6	// port pin for the PWM signal
 #define	DIR_PORTPIN		IO_C6	// port pin for the direction signal
-#define MAX_TORQUE		0xFF	// max positive or negative torque
+#define MAX_SPEED		214		// in positions/sec 
+								// my motor can make approx. 10 rotations in 6 seconds
+								// this is 1280 positions / 6 ~= 214 pps
 volatile uint8_t 		G_mot_sig_torque;	// the amount currently applied
 volatile uint8_t 		G_mot_sig_dir;		// the direction signal currently sent
+
 
 // task flags
 volatile uint8_t G_encoder_event; // can be used to release tasks
@@ -183,84 +194,131 @@ uint8_t get_position() {
 	return pos;
 }
 
-
 /* 
  * Fire this ISR on every signal we receive from the encoder
  */
 ISR(PCINT0_vect) {
 	
-	unsigned long us; // microseconds
-	unsigned long us_delta;
+	unsigned long us; // current elapsed microseconds
 	
 	// Used to print to serial comm window
 	char tempBuffer[32];
 	int length = 0;
 	
-	// update the encoder count
+	// get the current encoder readings
 	unsigned char enc_a_val = is_digital_input_high(ENC_A_PIN);
 	unsigned char enc_b_val = is_digital_input_high(ENC_B_PIN);
 
-
+	// use the pattern to determine the axle spin direction
 	char plus = enc_a_val ^ enc_b_val_last;
 	char minus = enc_b_val ^ enc_a_val_last;
 
+	// my encoder is giving unreliable readings, so this error triggers often
+	// not quite what to do except replace my hardware
+	if (enc_a_val != enc_a_val_last && enc_b_val != enc_b_val_last) {
+		G_enc_error = 1;
+	} else {
+		// clear the error if we have recovered this time
+		G_enc_error = 0;
+	}
+	
+	// if there is an encoder error, use the motor signal direction instead
+	// of the direction from the encoder
+	if (G_enc_error && (G_mot_sig_dir != 0)) {
+		plus = (char) -G_mot_sig_dir;
+		minus = (char) G_mot_sig_dir;
+	}
 	if(plus) { 
 		G_enc_count++;
 		G_enc_position++;
 		G_enc_direction = 0;
 	}
-	if(minus) {	
+	else if(minus) {	
 		G_enc_count--;
 		G_enc_position--;
 		G_enc_direction = 1;
 	}
-
-	if(enc_a_val != enc_a_val_last && enc_b_val != enc_b_val_last) {
-		G_enc_error = 1;
+	else {
+		// something messed up and don't increment anything
+		// TODO log something here or set an error flag
 	}
-	/* NOTE: The code below cannot be used if we reference the Pololu libraries
-	 * because it uses the timer 2 overflow interrupt
-	 */
-	// calculate the elapsed ticks since the last encoder event
-	// if (ticks_last_event < timer_ticks) {
-	// 	tick_delta = timer_ticks - ticks_last_event;
-	// }
-	// else {
-	// 	tick_delta = 0xFF - ticks_last_event + timer_ticks;
-	// }
-	
-   /*
-    * Angular velocity is in positions per second (positive or negative)
-    *      positions   1000000µs   1 position   
-    *  ω = --------- = --------- * ----------  = 1,000,000 / n µs
-    *       second     1 second       n µs      
-    */
-	us = ticks_to_microseconds(get_ticks()); // this uses timer 2 overlow set in pololu libraries
-	us_delta = us - us_at_last_event;
-	
-   	G_enc_ang_vel = 1000000UL / us_delta;
 
-	// roll over back to position zero when we spin all the way around
+	// roll over to position zero when the motor axel spins all the way around
 	G_enc_position %= ENC_POS_PER_ROT;
 	
+	/* NOTE: I was going to use the code below that depends on ISR(TIMER2_OVF_vect), 
+	 * but can't due to some references to the Pololu libraries which pull in code
+	 * that defines that interrupt handler and causes a linker error when I define
+	 * it. So, instead I am relying in the fact that those libraries set up timer 2
+	 * and use the get_ticks() and ticks_to_microseconds() methods for my 
+	 * calculations.
+	 *
+	// calculate the elapsed ticks since the last encoder event
+	if (ticks_last_event < timer_ticks) {
+		tick_delta = timer_ticks - ticks_last_event;
+	}
+	else {
+		tick_delta = 0xFF - ticks_last_event + timer_ticks;
+	}
+	 * 
+	 */
+	int16_t p_delta = 0;
+	us = ticks_to_microseconds(get_ticks()); // this uses timer 2 overlow set in pololu libraries
+
+	// if there are encoder errors, don't do calculations, because microseconds 
+	// also seem to be incorrect when encoder errors are present
+	if ( ! G_enc_error) {
+		// this calculates a running average to filter alignment noise
+		// previous time delta weighted three times more than current time delta
+		us_delta = (us_delta * 3 + (us - us_at_last_event)) >> 2;
+	
+	   /*
+	    * Angular velocity ω is in positions per second (positive or negative)
+	    *      positions   1000000µs   p position   
+	    *  ω = --------- = --------- * ----------  = (1,000,000 * p) / m
+	    *       second     1 second       m µs      
+	    */
+		p_delta = G_enc_count - G_enc_count_last;
+		G_enc_ang_vel = MICROS_PER_SEC * p_delta / us_delta;
+	}
+
 	if (G_logging_flag) {
-		print_usb("-----\r\n", 7);
-		length = sprintf(tempBuffer, "µs: %d\r\n", us);
+		
+		if (G_enc_error) { 	
+			print_usb("----- motor.c -->ERROR\r\n", 24); 
+		}
+		else { 				
+			print_usb("----- motor.c -----\r\n", 21); 
+		}
+		length = sprintf(tempBuffer, "µs: %lu  µs-last: %lu  µs∆: %lu\r\n", us, us_at_last_event, us_delta);
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "cnt: %d enA: %d enB: %d\r\n", G_enc_count, enc_a_val, enc_b_val);
+		if (G_enc_error) { 	
+			length = sprintf(tempBuffer, "cnt: %d  pos∆: N/C\r\n", G_enc_count); 
+		}
+		else {
+			length = sprintf(tempBuffer, "cnt: %d  pos∆: %d\r\n", G_enc_count, p_delta); 	
+		}
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "dir: %d pos: %d err: %d\r\n", G_enc_direction, G_enc_position, G_enc_error);
+		length = sprintf(tempBuffer, "enA: %d  enB: %d  plus: %d  minus: %d\r\n", enc_a_val, enc_b_val, plus, minus);
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "tor: %d dir: %d vel: %d\r\n", G_mot_sig_torque, G_mot_sig_dir, G_enc_ang_vel);
+		length = sprintf(tempBuffer, "edir: %d  pos: %d  err: %d\r\n", G_enc_direction, G_enc_position, G_enc_error);
+		print_usb(tempBuffer, length);
+		if (G_enc_error) { 	
+			length = sprintf(tempBuffer, "mdir: %d  tor: %d  vel: N/C\r\n", G_mot_sig_dir, G_mot_sig_torque);
+		}
+		else {
+			length = sprintf(tempBuffer, "mdir: %d  tor: %d  vel: %d\r\n", G_mot_sig_dir, G_mot_sig_torque, G_enc_ang_vel);
+		}
 		print_usb(tempBuffer, length);
 	}
 	
 	// preserve the current values for next time
-	us_at_last_event = us;
 	enc_a_val_last = enc_a_val;
 	enc_b_val_last = enc_b_val;
+	us_at_last_event = us;
+	G_enc_count_last = G_enc_count;
 	
-	// set the event flag
+	// set the event flag for controller processing
 	G_encoder_event = 1;
 }
 

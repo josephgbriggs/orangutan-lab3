@@ -13,7 +13,7 @@ volatile uint16_t G_Kd; // Derivative gain
  * Valid values for the parameter hz are {1000, 100, 50, 10}
  * If one of those values not selected, it defaults to 1000 Hz
  */
-void init_controller_rate(uint16_t hz);
+void init_controller_w_rate(uint16_t hz);
 
 /*
  * Set the speed in 'counts' per second

@@ -98,7 +98,7 @@ void set_position(uint8_t position) {
  *    50   20  1563
  *    10  100  7813
  */
-void init_controller_rate(uint16_t hz) {
+void init_controller_w_rate(uint16_t hz) {
 	
 	uint16_t top_cnt;
 	
@@ -106,7 +106,7 @@ void init_controller_rate(uint16_t hz) {
 	TCCR3B |= (1 << CS32);
 	
 	// Compare Output pins disconnected (OC3A/B not used)
-	// Leave default settings in TCCR3A
+	// So, leave default settings in TCCR3A
 	
 	// Set waveform generation to CTC 'mode 4', OCR3A to define the TOP
 	TCCR3B |= (1 << WGM32);
@@ -114,7 +114,7 @@ void init_controller_rate(uint16_t hz) {
 	// set the top in OCR3A
 	switch (hz) {
 		case 10:
-			top_cnt = 7831;
+			top_cnt = 7813;
 			time_step_ms = 100;
 			break;
 		case 50:
@@ -144,31 +144,32 @@ ISR(TIMER3_COMPA_vect) {
 	char tempBuffer[32];
 	int length = 0;
 	
-	// update the elapsed time
+	// update the elapsed time since last event motor encoder processed
 	time_delta_ms += time_step_ms;
 	
 	// only run if there is a motor encoder event to process
 	if (G_encoder_event) {
-		
-		// preserve the last values before storing new ones
-		last_mz_velocity = mz_velocity;
-		last_mz_position = mz_position;
+		G_encoder_event = 0; // reset the event flag from motor ISR
 		
 		// update values
 		mz_position = G_enc_position;
-		mz_velocity =  (MS_IN_SEC * (last_mz_position - mz_position)) / time_delta_ms;
+		mz_velocity = (MS_IN_SEC * (last_mz_position - mz_position)) / time_delta_ms;
 		
-		length = sprintf(tempBuffer, "last_mz_position: %u  ", last_mz_position);
+		length = sprintf(tempBuffer, "====== controller ISR ======\r\n");
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "mz_position: %u  ", mz_position);
+		length = sprintf(tempBuffer, "1000ms/s * (last_pos: %u ", last_mz_position);
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "time_delta_ms: %u  ", time_delta_ms);
+		length = sprintf(tempBuffer, " - curr_pos: %u) ", mz_position);
 		print_usb(tempBuffer, length);
-		length = sprintf(tempBuffer, "mz_velocity: %d\r\n", mz_velocity);
+		length = sprintf(tempBuffer, "/ time_∆_ms: %lu ", (unsigned long) time_delta_ms);
+		print_usb(tempBuffer, length);
+		length = sprintf(tempBuffer, "= velocity: %dpps\r\n", mz_velocity);
 		print_usb(tempBuffer, length);
 		
 		time_delta_ms = 0; // reset the intra-event timer
-		G_encoder_event = 0; // reset the flag
+		
+		// preserve the last values
+		last_mz_velocity = mz_velocity;
+		last_mz_position = mz_position;
 	}
-	
 }

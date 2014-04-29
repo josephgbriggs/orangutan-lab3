@@ -46,35 +46,25 @@ int main() {
 	serial_check();
 	print_reset_reason();
 	
-	
 	print_usb("Welcome to lab 3!\r\n", 19);
 	print_usage();
-	print_usb(PROMPT, PROMPT_LENGTH);
+	print_prompt();
 	
-	// clear "waiting for connection" message from the LCD
+	// clear "Waiting for connection" message from the LCD
 	clear();
+	
+	// turn on interrupts
 	sei();
 	
-	// Used to print to serial comm window
-	char tempBuffer[32];
-	int length = 0;
-	
-	// set controller for 1000 Hz
-	init_controller_rate(1000);
 	init_motor();
 	init_encoder();
+	// set controller for 1000 Hz
+	init_controller_w_rate(50);
+	
 	
 	while (1) {
 		serial_check();
 		check_for_new_bytes_received();
-		// if (G_logging_flag) {
-		// 	length = sprintf(tempBuffer, "encoder cnt: %u  ", G_enc_count);
-		// 	print_usb(tempBuffer, length);
-		// 	length = sprintf(tempBuffer, "position: %u\r\n", G_wheel_position);
-		// 	print_usb(tempBuffer, length);
-		// 	length = buffer_controller_values(tempBuffer);
-		// 	print_usb(tempBuffer, length);
-		// }
 	}
 	
 	return 0;

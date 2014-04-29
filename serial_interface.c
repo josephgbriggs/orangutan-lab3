@@ -3,6 +3,9 @@
 #include "motor.h"
 #include "controller.h"
 
+#define PROMPT ">"
+#define PROMPT_LENGTH 1
+
 // extern
 extern volatile uint8_t G_logging_flag;
 extern volatile uint16_t G_Kp; // Proportial gain
@@ -35,6 +38,10 @@ void print_usage() {
 	print_usb("  t<arg>  Execute trajectory\r\n", 30);
 	print_usb("  h       Print this menu\r\n\r\n", 29);
 }
+
+void print_prompt() {
+	print_usb(PROMPT, PROMPT_LENGTH);
+}
 	
 //------------------------------------------------------------------------------------------
 // Initialize serial communication through USB and print menu options
@@ -64,14 +71,21 @@ void process_received_string(const char* buffer)
 	// parse and echo back to serial comm window (and optionally the LCD)
 	char op_char;
 	int value;
-	int parsed;
-	parsed = sscanf(buffer, "%c %d", &op_char, &value);
+	int num_parsed;
+	
+	num_parsed = sscanf(buffer, "%c %d", &op_char, &value);
 #ifdef ECHO2LCD
 	lcd_goto_xy(0,0);
 	printf("Got %c %d\n", op_char, color, value);
 #endif
-	length = sprintf( tempBuffer, "\r\nOp:%c V:%d\r\n", op_char, value );
-	print_usb( tempBuffer, length );
+	if (num_parsed == 1) {
+		length = sprintf( tempBuffer, "\r\nOp:%c\r\n", op_char);
+		print_usb( tempBuffer, length );
+	}
+	else {
+		length = sprintf( tempBuffer, "\r\nOp:%c V:%d\r\n", op_char, value);
+		print_usb( tempBuffer, length );
+	}
 
 	// Check valid command and execute
 	switch (op_char) {

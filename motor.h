@@ -41,6 +41,8 @@
 
 #include <inttypes.h>
 
+#define MAX_TORQUE 0xFF	// max positive or negative torque
+
 // external globals
 extern volatile uint16_t G_enc_count;
 extern volatile uint8_t G_enc_position;

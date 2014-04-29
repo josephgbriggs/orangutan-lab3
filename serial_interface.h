@@ -29,10 +29,6 @@ extern volatile uint8_t G_logging_flag;
  * http://forum.pololu.com  
  */   
 
-#define PROMPT ">"
-#define PROMPT_LENGTH 1
-
-
 // wait_for_sending_to_finish:  Waits for the bytes in the send buffer to
 // finish transmitting on USB_COMM.  We must call this before modifying
 // send_buffer or trying to send more bytes, because otherwise we could
@@ -50,6 +46,8 @@ void init_interface();
 // Provide a string and the length of that string. My serial comm likes "\r\n" at 
 // the end of each string (be sure to include in length) for proper linefeed.
 void print_usb(char*,int);
+
+void print_prompt();
 
 // Display command options to the user
 void print_usage();
